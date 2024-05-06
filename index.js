@@ -17,7 +17,6 @@ app.use(bodyParser.json());
 
 
 // route middlewares
-// app.use("/api/users", userRoutes);
 app.use("/api/weather", weatherRoutes);
 
 app.listen(PORT, () => {
