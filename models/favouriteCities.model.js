@@ -2,9 +2,9 @@ import mongoose from "mongoose"
 
 const FavouriteCitiesSchema = new mongoose.Schema({
     // user id
-    _id: String,
-    favourites: [String]
-})
+    userId: String,
+    favourite: String
+},{timestamps: true})
 
 const FavouriteCities = new mongoose.model("FavouriteCities", FavouriteCitiesSchema)
 

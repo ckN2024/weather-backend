@@ -1,133 +1,171 @@
-import axios from "axios"
-import successResponse from "../helpers/response/successResponse.js"
-import errorResponse from "../helpers/response/errorResponse.js"
-import FavouriteCities from "../models/favouriteCities.model.js"
+import axios from "axios";
+import successResponse from "../helpers/response/successResponse.js";
+import errorResponse from "../helpers/response/errorResponse.js";
+import FavouriteCities from "../models/favouriteCities.model.js";
+import newGetDataFromToken from "../helpers/cognito/newGetDataFromToken.js";
 
-
-// get current weather
+// get current weather    /api/weather/current
 const getCurrentWeather = async (req, res) => {
-    try {
-        const {city} = req.headers
-        // console.log(`currentWeather: `,city)
-        const APIKEY = process.env.WEATHER_API_KEY
-        // console.log(APIKEY)
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${APIKEY}`
-    
-        const response = await axios.get(url);
-        const currentWeather = response.data;
+  try {
+    const { city } = req.headers;
+    // console.log(`currentWeather: `,city)
+    const APIKEY = process.env.WEATHER_API_KEY;
+    // console.log(APIKEY)
+    const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${APIKEY}`;
 
-        successResponse(res, 200, currentWeather, "weather fetched successfully")
-    } catch (error) {
-       console.log("Error fetching city weather")
-       console.log(`error: ${error}`)
-       
-       errorResponse(res, 400, "Error in fetching current weather", error.message)
-    }
-}
+    const response = await axios.get(url);
+    const currentWeather = response.data;
 
-// get five days weather
+    successResponse(res, 200, currentWeather, "weather fetched successfully");
+  } catch (error) {
+    console.log("Error fetching city weather");
+    console.log(`error: ${error}`);
+
+    errorResponse(res, 400, "Error in fetching current weather", error.message);
+  }
+};
+
+// get five days weather    /api/weather/fivedays
 const getFiveDaysWeather = async (req, res) => {
-    try {
-        const {city} = req.headers
-        // console.log(city)
-        const APIKEY = process.env.WEATHER_API_KEY
-        
-        const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${APIKEY}&cnt=5`
-    
-        const response = await axios.get(url);
-        const currentWeather = response.data;
-         
-        successResponse(res, 200, currentWeather, "weather fetched successfully")
-    } catch (error) {
-       console.log("Error fetching city weather")
-       
-       errorResponse(res, 400, "Error in fetching", error.message)
-    }
-}
+  try {
+    const { city } = req.headers;
+    // console.log(city)
+    const APIKEY = process.env.WEATHER_API_KEY;
 
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${APIKEY}&cnt=5`;
+
+    const response = await axios.get(url);
+    const currentWeather = response.data;
+
+    successResponse(res, 200, currentWeather, "weather fetched successfully");
+  } catch (error) {
+    console.log("Error fetching city weather");
+
+    errorResponse(res, 400, "Error in fetching", error.message);
+  }
+};
 
 // add to favourites of the user
-// POST     /api/weather/addtofavourites/:id
+// POST     /api/weather/addtofavourites
 const addToFavourites = async (req, res) => {
-    try {
-        // find the user
-        const {id} = req.params
-        if(!id) {
-            throw new Error("user id is required for adding to favourites")
-        }
-        const {city} = req.headers
+  try {
+    const { uuid, city } = req.headers
 
-        // find the user in db
-        const user = await FavouriteCities.findById(id);
-
-        // if the user exists then push to its favourites
-        if(user) {
-            // check if the city already exists in the array
-            if(user.favourites.includes(city)) {
-                throw new Error("City already added in favourites");
-            }
-            // keep the favourites to max 5
-            if (user.favouritePlaces.length >= 5) {
-                throw new Error("Favourite places cannot be more than 5");
-            }
-
-            user.favourites.push(city);
-            await user.save();
-        } else {
-            // else create a new document
-            const newData = new FavouriteCities({
-                _id: id,
-                favourites: [city]
-            })
-
-            await newData.save()
-        }
-
-        successResponse(res, 200, null, "city successfully added to favourites")
-    } catch (error) {
-        console.log(error.message)
-        errorResponse(res, 400, "Error in adding to favourites", error.message)
+    if (!uuid) {
+      throw new Error("user needs to be authenticated for adding to favourites");
     }
-}
+
+    const newItem = new FavouriteCities({
+      userId: uuid,
+      favourite: city,
+    });
+
+    const isCityInFavourites = FavouriteCities.find({$and: [{userId: uuid}, {favourite: city}]})
+    if(isCityInFavourites.length) {
+      throw new Error("City already added to favourites")
+    }
+
+    await newItem.save();
+
+    successResponse(res, 200, null, "city successfully added to favourites");
+  } catch (error) {
+    console.log(error.message);
+    errorResponse(res, 400, "Error in adding to favourites", error.message);
+  }
+};
+
+// remove from favourites of the user
+// DELETE     /api/weather/addtofavourites
+const removeFromFavourites = async (req, res) => {
+  try {
+    const {uuid, city} = req.headers
+
+    if (!uuid) {
+      throw new Error("user needs to be authenticated for removing from favourites");
+    }
+    
+
+    await FavouriteCities.deleteOne({ $and: [{ userId: uuid },{ favourite: city }] })
+
+
+    successResponse(res, 200, null, "city successfully removed from favourites");
+  } catch (error) {
+    console.log(error.message);
+    errorResponse(res, 400, "Error in adding to favourites", error.message);
+  }
+};
 
 // get a user's favourite city + weather of the fav cities
-// GET    /api/weather/getfavouritecities/:id  
+// GET    /api/weather/getfavouritecities/
 const getFavouriteCities = async (req, res) => {
-    try {
-        // find the user
-        const {id} = req.params
-        if(!id) {
-            throw new Error("user id is required for adding to favourites")
-        }
+  try {
+    const {uuid} = req.headers
 
-        const user = await FavouriteCities.findById(id);
-
-        if(!user) {
-            throw new Error("Requested user not found in db")
-        }
-        
-        // get the weather of all fav cities
-        let responseData = [];
-        const APIKEY=process.env.WEATHER_API_KEY
-        
-        for (let city of user.favourites) {
-            // fetch the weather data of the city and push to responseData
-            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${APIKEY}`
-            const response = await axios.get(url);
-            const currentWeather = response.data
-            responseData.push({
-                city,
-                temp: currentWeather.main.temp
-            })
-        }
-
-        successResponse(res, 200, responseData, "fav cities weather fetched successfully")
-
-    } catch (error) {
-        console.log("Error in fetching weather of fav cities")
-        console.log(error)
-        errorResponse(res, 400, "Error in fetching fav cities weather", error)
+    if (!uuid) {
+      throw new Error("user needs to be authenticated for adding to favourites");
     }
-}
 
-export {getCurrentWeather, getFiveDaysWeather, addToFavourites, getFavouriteCities}
+    const favourites = await FavouriteCities.find({userId: uuid})
+
+    successResponse(
+      res,
+      200,
+      favourites,
+      "fav cities weather fetched successfully"
+    );
+  } catch (error) {
+    console.log("Error in fetching weather of fav cities");
+    console.log(error);
+    errorResponse(res, 400, "Error in fetching fav cities weather", error);
+  }
+};
+
+const getFavouriteCitiesWithWeather = async (req, res) => {
+  try {
+    const {uuid} = req.headers
+
+    if (!uuid) {
+      throw new Error("user needs to be authenticated for adding to favourites");
+    }
+
+    const favourites = await FavouriteCities.find({userId: uuid}).lean()
+    // console.log(favourites)
+
+    
+    // get weather of the favourite cities
+    let favouritesWithWeather = [];
+    for(let record of favourites) {
+      const APIKEY = process.env.WEATHER_API_KEY;
+      // console.log(APIKEY)
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${record.favourite}&appid=${APIKEY}`;
+
+      const response = await axios.get(url);
+      const currentTemperature = response.data.main.temp;
+      favouritesWithWeather.push({...record, temp: currentTemperature})
+      // console.log(currentTemperature)
+    }
+
+    console.log(favouritesWithWeather)
+
+
+    successResponse(
+      res,
+      200,
+      favouritesWithWeather,
+      "fav cities weather fetched successfully"
+    );
+  } catch (error) {
+    console.log("Error in fetching weather of fav cities");
+    console.log(error);
+    errorResponse(res, 400, "Error in fetching fav cities weather", error);
+  }
+};
+
+export {
+  getCurrentWeather,
+  getFiveDaysWeather,
+  addToFavourites,
+  getFavouriteCities,
+  getFavouriteCitiesWithWeather,
+  removeFromFavourites
+};
