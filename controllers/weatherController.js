@@ -161,11 +161,24 @@ const getFavouriteCitiesWithWeather = async (req, res) => {
   }
 };
 
+const fetchAllUsersWithFavavourites = async (req, res) => {
+  try {
+    const usersWithFavourites = await FavouriteCities.find({})
+    
+    successResponse(res, 200, usersWithFavourites, "All users with their favourites fetched")
+  } catch (error) {
+    console.log("Error in fetching all users with their favourites")
+    console.log(error)
+    errorResponse(res, 400, "Error in fetching all users with their favourites")
+  }
+}
+
 export {
   getCurrentWeather,
   getFiveDaysWeather,
   addToFavourites,
   getFavouriteCities,
   getFavouriteCitiesWithWeather,
-  removeFromFavourites
+  removeFromFavourites,
+  fetchAllUsersWithFavavourites
 };

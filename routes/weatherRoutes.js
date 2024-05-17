@@ -5,7 +5,8 @@ import {
     addToFavourites, 
     getFavouriteCities,
     getFavouriteCitiesWithWeather,
-    removeFromFavourites 
+    removeFromFavourites,
+    fetchAllUsersWithFavavourites 
 } from "../controllers/weatherController.js"
 import authenticateUser from "../middlewares/authMiddleware.js"
 
@@ -18,6 +19,7 @@ router.route('/addtofavourites').post(authenticateUser, addToFavourites)
 router.route('/getfavouritecities').get(authenticateUser, getFavouriteCities)
 router.route('/getfavouritecitieswithweather').get(authenticateUser, getFavouriteCitiesWithWeather)
 router.route('/removefromfavourites').delete(authenticateUser, removeFromFavourites)
+router.route('/fetchAllUsersWithFavavourites').get(fetchAllUsersWithFavavourites)
 
 
 export default router
