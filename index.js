@@ -31,3 +31,11 @@ app.use("/api/weather", weatherRoutes);
 app.listen(PORT, () => {
   console.log(`weather server running on port: ${PORT}`);
 });
+
+
+// route just to check health for alb
+app.get("/healthy", (req, res)=>{
+  res.json({
+    message: "route to check health"
+  })
+})
